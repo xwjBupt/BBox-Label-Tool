@@ -13,7 +13,7 @@ try:
 except ImportError:
     # for Python3
     from tkinter import *   ## notice lowercase 't' in tkinter here
-import tkinter.messagebox as tkMessageBox
+import tkMessageBox
 from PIL import Image, ImageTk
 import os
 import glob
