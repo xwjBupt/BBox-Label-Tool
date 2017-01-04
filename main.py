@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #-------------------------------------------------------------------------------
 # Name:        Object bounding box label tool
 # Purpose:     Label object bboxes for ImageNet Detection data
@@ -20,7 +21,7 @@ import glob
 import shutil
 
 # colors for the bboxes
-COLORS = ['#FF69B4', '#DDA0DD', '#00FF00', '#008000', '#FFA500', '#FFC0CB', '#DC143C',
+COLORS = ['#FF69B4', '#DDA0DD', '#00FF00', '#008000', '#FFA500', '#DC143C',
           '#C0C0C0', '#FFE4C4', '#32CD32', '#8B008B', '#6495ED', '#8A2BE2', '#EE82EE',
           '#FF00FF', '#006400', '#7FFF00', '#FF00FF', '#0000CD', '#FF8C00', '#FFEFD5',
           '#C71585', '#7CFC00', '#9370DB', '#6A5ACD', '#B0C4DE', '#4169E1', '#ADFF2F',
@@ -68,6 +69,7 @@ class LabelTool():
         self.rel = dict()
         self.relc = dict()
         self.selected_obj = None
+        self.write_dir = None
 
         # ----------------- GUI stuff ---------------------
         # dir entry & load
@@ -141,7 +143,7 @@ class LabelTool():
            return
         # get image list
         self.imageList = glob.glob(os.path.join(self.imageDir, '*.jpg'))
-        print(len(self.imageList))
+        self.imageList.sort()
         if len(self.imageList) == 0:
             print('No .jpg images found in the specified dir')
             return
@@ -151,13 +153,13 @@ class LabelTool():
         self.total = len(self.imageList)
 
          # set up output dir
-        self.outDir = 'Labels'
+        self.outDir = os.path.join('Labels', os.path.split(self.imageDir)[-1])
         if not os.path.exists(self.outDir):
-            os.mkdir(self.outDir)
+            os.makedirs(self.outDir)
 
         self.num = 0
-        if os.path.exists(os.path.join(self.outDir, 'num.txt')):
-            with open(os.path.join(self.outDir, 'num.txt'), 'r') as f:
+        if os.path.exists(os.path.join(self.outDir, '.num.txt')):
+            with open(os.path.join(self.outDir, '.num.txt'), 'r') as f:
                 self.num = int(f.readline())
 
         if os.path.exists(os.path.join(self.outDir, '.col.txt')):
@@ -177,25 +179,20 @@ class LabelTool():
         self.mainPanel.config(width = max(self.tkimg.width(), 400), height = max(self.tkimg.height(), 400))
         self.mainPanel.create_image(0, 0, image = self.tkimg, anchor=NW)
         self.progLabel.config(text="%06d/%06d" % (self.cur, self.total))
+        self.write_dir = os.path.join(self.outDir, os.path.split(imagepath)[-1].split('.')[0])
 
         # load labels
         self.clearBBox()
-        write_dir = os.path.join(self.outDir, '%06d' % self.cur)
-        if os.path.isdir(write_dir):
-            curr_labels = glob.glob(os.path.join(self.outDir, '%06d' % self.cur, '*.txt'))
+        if os.path.isdir(self.write_dir):
+            curr_labels = glob.glob(os.path.join(self.write_dir, '*.txt'))
             if len(curr_labels) > 0:
+            	curr_labels.sort()
                 self.clearObj()
                 for label_name in curr_labels:
                     id_index = int(os.path.split(label_name)[-1].split('.')[0])
                     color = self.relc[id_index]
-                    is_exits = False
-                    # for i in range(self.listbox2.size()):
-                    #     if int(self.listbox2.get(i)) == id_index:
-                    #         is_exits = True
-                    #         break
-                    if not is_exits:
-                        self.listbox2.insert(END, str(id_index))
-                        self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
+                    self.listbox2.insert(END, str(id_index))
+                    self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
                     with open(label_name, 'r') as f:
                         line = f.readline()
                     tmp = [int(t.strip()) for t in line.split(',')]
@@ -209,28 +206,19 @@ class LabelTool():
                     self.listbox.itemconfig(len(self.bboxIdList) - 1, fg=color)
                     self.rel[tmpId] = id_index
         else:
-            os.mkdir(write_dir)
-            if self.cur == 1 or self.listbox2.size() != 0:
-                return
-            last_labels = glob.glob(os.path.join(self.outDir, '%06d' % (self.cur-1), '*.txt'))
-            for label_name in last_labels:
-                id_index = int(os.path.split(label_name)[-1].split('.')[0])
-                color = COLORS[self.listbox2.size() % len(COLORS)]
-                self.listbox2.insert(END, str(id_index))
-                self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
+            os.mkdir(self.write_dir)
 
     def saveImage(self):
-        save_dir = os.path.join(self.outDir, '%06d' % self.cur)
-        shutil.rmtree(save_dir)
-        os.mkdir(save_dir)
+        shutil.rmtree(self.write_dir)
+        os.mkdir(self.write_dir)
         for bbox, idx in zip(self.bboxList, self.bboxIdList):
             id_index = self.rel[idx]
-            with open(os.path.join(self.outDir, '%06d' % self.cur, str(id_index) + '.txt'), 'w') as f:
+            with open(os.path.join(self.write_dir, str(id_index) + '.txt'), 'w') as f:
                 f.write(','.join(map(str, bbox)))
         with open(os.path.join(self.outDir, '.col.txt'), 'w') as f:
             for k, v in self.relc.items():
                 f.write('%d,%s\n' % (k, v))
-        with open(os.path.join(self.outDir, 'num.txt'), 'w') as f:
+        with open(os.path.join(self.outDir, '.num.txt'), 'w') as f:
             f.write(str(self.num))
         print('Image No. %d saved' % self.cur)
 
@@ -308,7 +296,7 @@ class LabelTool():
     def addObj(self):
         self.num += + 1
         id_index = self.num
-        color = COLORS[self.listbox2.size() % len(COLORS)]
+        color = COLORS[id_index % len(COLORS)]
         self.relc[id_index] = color
         self.listbox2.insert(END, str(id_index))
         self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
