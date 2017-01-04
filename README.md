@@ -1,4 +1,4 @@
-BBox-Label-Tool modify by seqquence labeling
+BBox-Label-Tool modify by sequence labeling
 ===============
 
 A simple tool for labeling object bounding boxes in images, implemented with Python Tkinter.
