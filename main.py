@@ -35,6 +35,9 @@ COLORS = ['#FF69B4', '#DDA0DD', '#00FF00', '#008000', '#FFA500', '#DC143C',
 # image sizes for the examples
 SIZE = 256, 256
 
+class_name = ['insulator', 'hammer', 'tower', 'nest', 'text']
+
+
 class LabelTool():
     def __init__(self, master):
         # set up the main frame
@@ -131,6 +134,7 @@ class LabelTool():
         self.frame.columnconfigure(1, weight = 1)
         self.frame.rowconfigure(4, weight = 1)
 
+
     def loadDir(self, dbg=False):
         if not dbg:
             s = self.entry.get()
@@ -142,10 +146,11 @@ class LabelTool():
            tkMessageBox.showerror("Error!", message="The specified dir doesn't exist!")
            return
         # get image list
-        self.imageList = glob.glob(os.path.join(self.imageDir, '*.jpg'))
+        #self.imageList = glob.glob(os.path.join(self.imageDir, '*.jpg'))
+        self.imageList = glob.glob(os.path.join(self.imageDir, '*.JPEG'))
         self.imageList.sort()
         if len(self.imageList) == 0:
-            print('No .jpg images found in the specified dir')
+            print('No .JPEG images found in the specified dir')
             return
 
         # default to the 1st image in the collection
@@ -171,6 +176,7 @@ class LabelTool():
         self.loadImage()
         print('%d images loaded from %s' % (self.total, self.imageDir))
 
+
     def loadImage(self):
         # load image
         imagepath = self.imageList[self.cur - 1]
@@ -191,30 +197,40 @@ class LabelTool():
                 for label_name in curr_labels:
                     id_index = int(os.path.split(label_name)[-1].split('.')[0])
                     color = self.relc[id_index]
-                    self.listbox2.insert(END, str(id_index))
-                    self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
+
+                    lines = []
                     with open(label_name, 'r') as f:
-                        line = f.readline()
-                    tmp = [int(t.strip()) for t in line.split(',')]
-                    tmpId = self.mainPanel.create_rectangle(tmp[0], tmp[1],
-                                                            tmp[2], tmp[3],
-                                                            width=2,
-                                                            outline=color)
-                    self.bboxList.append(tuple(tmp))
-                    self.bboxIdList.append(tmpId)
-                    self.listbox.insert(END, '(%d, %d, %d, %d)' % (tmp[0], tmp[1], tmp[2], tmp[3]))
-                    self.listbox.itemconfig(len(self.bboxIdList) - 1, fg=color)
-                    self.rel[tmpId] = id_index
+                        for line in f.readlines():
+                            tmp = [int(t.strip()) for t in line.split(',')]
+                            tmpId = self.mainPanel.create_rectangle(tmp[0], tmp[1],
+                                                                    tmp[2], tmp[3],
+                                                                    width=2,
+                                                                    outline=color)
+                            self.bboxList.append(tuple(tmp))
+                            self.bboxIdList.append(tmpId)
+                            self.listbox.insert(END, '(%d, %d, %d, %d)' % (tmp[0], tmp[1], tmp[2], tmp[3]))
+                            self.listbox.itemconfig(len(self.bboxIdList) - 1, fg=color)
+                            self.rel[tmpId] = id_index
+
+                for i in range(1, len(class_name)+1):
+                    color = self.relc[i]
+                    self.listbox2.insert(END, class_name[i-1])
+                    self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
+
         else:
             os.mkdir(self.write_dir)
+            # add class_name
+            if self.num == 0:
+                for i in range(len(class_name)):
+                    self.addObj()
 
     def saveImage(self):
         shutil.rmtree(self.write_dir)
         os.mkdir(self.write_dir)
         for bbox, idx in zip(self.bboxList, self.bboxIdList):
             id_index = self.rel[idx]
-            with open(os.path.join(self.write_dir, str(id_index) + '.txt'), 'w') as f:
-                f.write(','.join(map(str, bbox)))
+            with open(os.path.join(self.write_dir, str(id_index) + '.txt'), 'a') as f:
+                f.write(','.join(map(str, bbox)) + '\n')
         with open(os.path.join(self.outDir, '.col.txt'), 'w') as f:
             for k, v in self.relc.items():
                 f.write('%d,%s\n' % (k, v))
@@ -229,13 +245,18 @@ class LabelTool():
             self.mainPanel.delete(self.bboxId)
             self.STATE['click'] = 0
             return
-        self.selected_obj = int(self.listbox2.get(sel[0]))
-        for v in self.rel.values():
-            if v == self.selected_obj:
-                tkMessageBox.showerror("Error!", message="A obj index only links to one bbox!")
-                self.mainPanel.delete(self.bboxId)
-                self.STATE['click'] = 0
-                return
+        for index, e in enumerate(class_name):
+            if e == self.listbox2.get(sel[0]):
+                self.selected_obj = index + 1
+        #self.selected_obj = int(self.listbox2.get(sel[0]))
+
+        #for v in self.rel.values():
+        #    if v == self.selected_obj:
+        #        tkMessageBox.showerror("Error!", message="A obj index only links to one bbox!")
+        #        self.mainPanel.delete(self.bboxId)
+        #        self.STATE['click'] = 0
+        #        return
+
         if self.STATE['click'] == 0:
             self.STATE['x'], self.STATE['y'] = event.x, event.y
         else:
@@ -243,6 +264,7 @@ class LabelTool():
             y1, y2 = min(self.STATE['y'], event.y), max(self.STATE['y'], event.y)
             self.bboxList.append((x1, y1, x2, y2))
             self.bboxIdList.append(self.bboxId)
+
             self.listbox.insert(END, '(%d, %d, %d, %d)' % (x1, y1, x2, y2))
             self.listbox.itemconfig(len(self.bboxIdList) - 1, fg=self.relc[self.selected_obj])
             self.rel[self.bboxId] = self.selected_obj
@@ -294,11 +316,11 @@ class LabelTool():
         self.rel.clear()
 
     def addObj(self):
-        self.num += + 1
+        self.num += 1
         id_index = self.num
         color = COLORS[id_index % len(COLORS)]
         self.relc[id_index] = color
-        self.listbox2.insert(END, str(id_index))
+        self.listbox2.insert(END, class_name[id_index-1])
         self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
 
     def delObj(self):

@@ -1,3 +1,9 @@
+# Extension
+
+Add multi-bboxes for one class in one image.
+
+---
+
 BBox-Label-Tool modify by sequence labeling
 ===============
 
