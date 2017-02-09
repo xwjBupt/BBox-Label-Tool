@@ -1,12 +1,14 @@
 #!/usr/bin/env python
+
 # -*- coding: utf-8 -*-
 
 '''
 Convert BBox-Label to VOC2007 format
-Usage: python convert.py [annotation_path]
+Usage: python convert.py [annotation_path] [image_path]
 '''
 import sys, os
 import copy
+import Image
 
 Annnotation = """<annotation>
 	<folder>DianWang</folder>
@@ -45,8 +47,11 @@ Object = """
 	</object>
 """
 
+def getImageSize(imgPath, fileNum):
+    filename = os.path.join(imgPath, "{}.JPG".format(fileNum))
+    return Image.open(filename).size
 
-def convert(filepath):
+def convert(filepath, imgPath):
     if not os.path.exists('Annotations'):
         os.makedirs('Annotations')
 
@@ -54,8 +59,7 @@ def convert(filepath):
     global Object
     files = sorted([x for x in os.listdir(filepath) if not x.startswith('.')])
     for filename in files: # annotation/[000000 000001 000002 ...] 
-        width = 1000
-        height = 1000
+        width, height = getImageSize(imgPath, filename)
         names = ['insulator', 'hammer', 'tower', 'nest', 'text']
         objs = ""
         for obj in sorted(os.listdir( os.path.join(filepath, filename) )): # 000000/[1.txt  2.txt  3.txt  4.txt  5.txt]
@@ -73,17 +77,17 @@ def convert(filepath):
                     #newObj = Object.format(name, x1, y1, x2, y2)
                     objs += newObj
         newAnno = copy.deepcopy(Annnotation).format(filename, width, height, objs)
-        
+
         with open('Annotations/{}.xml'.format(filename), 'w') as fid:
             fid.write(newAnno)
         print "write to Annotations/{}".format(filename)
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         print(__doc__)
         return
-    convert(sys.argv[1])
+    convert(sys.argv[1], sys.argv[2])
 
 if __name__ == "__main__":
     main()
