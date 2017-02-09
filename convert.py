@@ -82,7 +82,6 @@ def convert(filepath, imgPath):
             fid.write(newAnno)
         print "write to Annotations/{}".format(filename)
 
-
 def main():
     if len(sys.argv) != 3:
         print(__doc__)
