@@ -38,7 +38,6 @@ SIZE = 256, 256
 
 class_name = ['insulator', 'hammer', 'tower', 'nest', 'text']
 
-
 class LabelTool():
     def __init__(self, master):
         # set up the main frame
@@ -152,8 +151,8 @@ class LabelTool():
            tkMessageBox.showerror("Error!", message="The specified dir doesn't exist!")
            return
         # get image list
-        #self.imageList = glob.glob(os.path.join(self.imageDir, '*.jpg'))
-        self.imageList = glob.glob(os.path.join(self.imageDir, '*.JPG'))
+        self.imageList = glob.glob(os.path.join(self.imageDir, '*.jpg'))
+        #self.imageList = glob.glob(os.path.join(self.imageDir, '*.JPG'))
         self.imageList.sort()
         if len(self.imageList) == 0:
             print('No .JPG images found in the specified dir')
@@ -188,6 +187,7 @@ class LabelTool():
         imagepath = self.imageList[self.cur - 1]
         img = Image.open(imagepath)
         #img = img.resize((img.size[0]*2, img.size[1]*2), Image.ANTIALIAS)
+        img = img.resize((int(img.size[0]/4), int(img.size[1]/4)), Image.ANTIALIAS)
         self.tkimg = ImageTk.PhotoImage(img)
         self.mainPanel.config(width = max(self.tkimg.width(), 400), height = max(self.tkimg.height(), 400))
         self.mainPanel.create_image(0, 0, image = self.tkimg, anchor=NW)
