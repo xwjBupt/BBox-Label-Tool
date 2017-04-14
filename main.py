@@ -22,7 +22,7 @@ import glob
 import shutil
 
 # colors for the bboxes
-COLORS = ['#FF69B4', '#DDA0DD', '#00FF00', '#008000', '#FFA500', '#DC143C',
+COLORS = ['#FFD700', '#FF69B4', '#DDA0DD', '#00FF00', '#008000', '#FFA500', '#DC143C',
           '#C0C0C0', '#FFE4C4', '#32CD32', '#8B008B', '#6495ED', '#8A2BE2', '#EE82EE',
           '#FF00FF', '#006400', '#7FFF00', '#FF00FF', '#0000CD', '#FF8C00', '#FFEFD5',
           '#C71585', '#7CFC00', '#9370DB', '#6A5ACD', '#B0C4DE', '#4169E1', '#ADFF2F',
@@ -32,11 +32,13 @@ COLORS = ['#FF69B4', '#DDA0DD', '#00FF00', '#008000', '#FFA500', '#DC143C',
           '#FAF0E6', '#98FB98', '#00FFFF', '#87CEEB', '#00BFFF', '#B0E0E6', '#00FA9A',
           '#F5FFFA', '#F0E68C', '#F5DEB3', '#008B8B', '#8FBC8F', '#FF0000', '#F08080',
           '#66CDAA', '#3CB371', '#2E8B57', '#A52A2A', '#B22222', '#AFEEEE', '#FFF8DC',
-          '#DAA520', '#FFFAF0', '#FDF5E6', '#F4A460', '#D2691E', '#FFD700']
+          '#DAA520', '#FFFAF0', '#FDF5E6', '#F4A460', '#D2691E']
 # image sizes for the examples
 SIZE = 256, 256
 
-class_name = ['insulator', 'hammer', 'tower', 'nest', 'text']
+class_name = ['cervical']
+
+SINGLE = True
 
 class LabelTool():
     def __init__(self, master):
@@ -57,6 +59,8 @@ class LabelTool():
         self.total = 0
         self.category = 0
         self.tkimg = None
+        self.imageHeight = 600
+        self.imageScale = None
 
         # initialize mouse state
         self.STATE = {}
@@ -65,6 +69,7 @@ class LabelTool():
 
         # reference to bbox
         self.bboxIdList = []
+        self.bboxBtnIdList = []
         self.bboxId = None
         self.bboxList = []
         self.hl = None
@@ -181,13 +186,12 @@ class LabelTool():
         self.loadImage()
         print('%d images loaded from %s' % (self.total, self.imageDir))
 
-
     def loadImage(self):
         # load image
         imagepath = self.imageList[self.cur - 1]
         img = Image.open(imagepath)
-        #img = img.resize((img.size[0]*2, img.size[1]*2), Image.ANTIALIAS)
-        img = img.resize((int(img.size[0]/4), int(img.size[1]/4)), Image.ANTIALIAS)
+        self.imageScale = self.imageHeight * 1.0  / img.size[0]
+        img = img.resize((int(img.size[0] * self.imageScale), int(img.size[1] * self.imageScale)), Image.ANTIALIAS)
         self.tkimg = ImageTk.PhotoImage(img)
         self.mainPanel.config(width = max(self.tkimg.width(), 400), height = max(self.tkimg.height(), 400))
         self.mainPanel.create_image(0, 0, image = self.tkimg, anchor=NW)
@@ -209,12 +213,17 @@ class LabelTool():
                     with open(label_name, 'r') as f:
                         for line in f.readlines():
                             tmp = [int(t.strip()) for t in line.split(',')]
-                            tmpId = self.mainPanel.create_rectangle(tmp[0], tmp[1],
-                                                                    tmp[2], tmp[3],
+                            tmpId = self.mainPanel.create_rectangle(int(self.imageScale * tmp[0]), 
+                                                                    int(self.imageScale * tmp[1]),
+                                                                    int(self.imageScale * tmp[2]), 
+                                                                    int(self.imageScale * tmp[3]),
                                                                     width=2,
                                                                     outline=color)
+                            tmp_btnId = self.createButton(self.mainPanel, (int(self.imageScale * tmp[0]), int(self.imageScale * tmp[1])))
+
                             self.bboxList.append(tuple(tmp))
                             self.bboxIdList.append(tmpId)
+                            self.bboxBtnIdList.append(tmp_btnId)
                             self.listbox.insert(END, '(%d, %d, %d, %d)' % (tmp[0], tmp[1], tmp[2], tmp[3]))
                             self.listbox.itemconfig(len(self.bboxIdList) - 1, fg=color)
                             self.rel[tmpId] = id_index
@@ -223,7 +232,6 @@ class LabelTool():
                     color = self.relc[i]
                     self.listbox2.insert(END, class_name[i-1])
                     self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
-
         else:
             os.mkdir(self.write_dir)
             # add class_name
@@ -247,28 +255,29 @@ class LabelTool():
 
     def mouseClick(self, event):
         sel = self.listbox2.curselection()
-        if len(sel) != 1:
+        if len(sel) != 1 and len(class_name) > 1:
             tkMessageBox.showerror("Error!", message="The specified bbox must be linked to an obj index!")
             self.mainPanel.delete(self.bboxId)
             self.STATE['click'] = 0
             return
+        elif len(class_name) == 1:
+            sel = [self.listbox2.index(0)]
+
         for index, e in enumerate(class_name):
             if e == self.listbox2.get(sel[0]):
                 self.selected_obj = index + 1
-        #self.selected_obj = int(self.listbox2.get(sel[0]))
-
-        #for v in self.rel.values():
-        #    if v == self.selected_obj:
-        #        tkMessageBox.showerror("Error!", message="A obj index only links to one bbox!")
-        #        self.mainPanel.delete(self.bboxId)
-        #        self.STATE['click'] = 0
-        #        return
 
         if self.STATE['click'] == 0:
             self.STATE['x'], self.STATE['y'] = event.x, event.y
         else:
             x1, x2 = min(self.STATE['x'], event.x), max(self.STATE['x'], event.x)
             y1, y2 = min(self.STATE['y'], event.y), max(self.STATE['y'], event.y)
+
+            x1 = int( x1 / self.imageScale )
+            y1 = int( y1 / self.imageScale )
+            x2 = int( x2 / self.imageScale )
+            y2 = int( y2 / self.imageScale )
+
             self.bboxList.append((x1, y1, x2, y2))
             self.bboxIdList.append(self.bboxId)
 
@@ -277,6 +286,8 @@ class LabelTool():
             self.rel[self.bboxId] = self.selected_obj
             self.listbox2.selection_clear(0, self.listbox2.size())
             self.bboxId = None
+            if SINGLE:
+                self.nextImage()
         self.STATE['click'] = 1 - self.STATE['click']
 
     def mouseMove(self, event):
@@ -302,15 +313,20 @@ class LabelTool():
                 self.bboxId = None
                 self.STATE['click'] = 0
 
-    def delBBox(self):
+    def delBBox(self, idx=None):
         sel = self.listbox.curselection()
-        if len(sel) != 1:
+        if len(sel) != 1 and idx == None:
             return
-        idx = int(sel[0])
+        if idx == None:
+            idx = int(sel[0])
+        if idx == -1:
+            return
         tmpId = self.bboxIdList[idx]
         self.mainPanel.delete(self.bboxIdList[idx])
-        self.bboxIdList.pop(idx)
         self.bboxList.pop(idx)
+        self.bboxIdList.pop(idx)
+        self.mainPanel.delete(self.bboxBtnIdList[idx])
+        self.bboxBtnIdList.pop(idx)
         self.listbox.delete(idx)
         self.rel.pop(tmpId)
 
@@ -351,6 +367,7 @@ class LabelTool():
             self.rel[k] = None
 
     def prevImage(self, event = None):
+        self.clearBBoxButtons()
         self.listbox2.selection_clear(0, self.listbox2.size())
         self.saveImage()
         if self.cur > 1:
@@ -358,6 +375,7 @@ class LabelTool():
             self.loadImage()
 
     def nextImage(self, event = None):
+        self.clearBBoxButtons()
         self.listbox2.selection_clear(0, self.listbox2.size())
         self.saveImage()
         if self.cur < self.total:
@@ -371,6 +389,25 @@ class LabelTool():
             self.saveImage()
             self.cur = idx
             self.loadImage()
+    
+    def createButton(self, canvas, pos, _text="Del"):
+        button = Button(self.frame, text=_text, anchor=W, command=lambda: self.delBBoxByBtn(pos) )
+        button.configure(width=10, activebackground="#33B5E5", relief=FLAT)
+        return canvas.create_window(pos[0], pos[1], anchor=NW, window=button, height=30, width=50)
+
+    def clearBBoxButtons(self):
+        for i in self.bboxBtnIdList:
+            self.mainPanel.delete(i)
+
+    def delBBoxByBtn(self, pos):
+        eps = 8
+        idx = -1
+        for i in range(0, len(self.bboxList)):
+            if abs(self.bboxList[i][0] - pos[0]*1.0 / self.imageScale) < eps and abs(self.bboxList[i][1] - pos[1]*1.0 / self.imageScale) < eps:
+                idx = i
+                break
+        print "delete: ", idx, pos
+        self.delBBox(idx)
 
 if __name__ == '__main__':
     root = Tk()
