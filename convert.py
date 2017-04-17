@@ -12,6 +12,9 @@ import Image
 import commands
 import xml.etree.ElementTree as ET
 
+#names = ['insulator', 'hammer', 'tower', 'nest', 'text']
+names = ['cervical']
+
 Annnotation = """<annotation>
 	<folder>DianWang</folder>
 	<filename>{}</filename>
@@ -50,7 +53,7 @@ Object = """
 """
 
 def getImageSize(imgPath, fileNum):
-    filename = os.path.join(imgPath, "{}.JPG".format(fileNum))
+    filename = os.path.join(imgPath, "{}.jpg".format(fileNum))
     return Image.open(filename).size
 
 def createAnnotation(filepath, imgPath):
@@ -65,7 +68,6 @@ def createAnnotation(filepath, imgPath):
     i = 0
     for filename in files: # annotation/[000000 000001 000002 ...] 
         width, height = getImageSize(imgPath, filename)
-        names = ['insulator', 'hammer', 'tower', 'nest', 'text']
         objs = ""
         for obj in sorted(os.listdir( os.path.join(filepath, filename) )): # 000000/[1.txt  2.txt  3.txt  4.txt  5.txt]
             name = names[int(obj[0])-1]
@@ -115,7 +117,7 @@ def createJPEGImages(filepath, imgPath):
 
     i = 1
     for filename in files: 
-        cmd = 'ln -s {}{:0>6}.JPG {:0>6}.jpg'.format(imgPath, filename, filename)
+        cmd = 'ln -s {}{:0>6}.jpg {:0>6}.jpg'.format(imgPath, filename, filename)
         (status, output) = commands.getstatusoutput(cmd)
         if status != 0:
             print "Error when run \"ln\""

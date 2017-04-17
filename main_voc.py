@@ -20,6 +20,48 @@ from PIL import Image, ImageTk
 import os
 import glob
 import shutil
+import xml.etree.ElementTree as ET
+import copy
+
+class_name = ['cervical']
+SINGLE = True
+
+#class_name = ['insulator', 'hammer', 'tower', 'nest', 'text']
+#SINGLE = False
+
+# xml template
+Annnotation = """<annotation>
+	<folder>DuinoDu</folder>
+	<filename>{}</filename>
+	<source>
+		<database>The VOC2007 Database</database>
+		<annotation>PASCAL VOC2007</annotation>
+		<image>flickr</image>
+		<flickrid>341012865</flickrid>
+	</source>
+	<size>
+		<width>{}</width>
+		<height>{}</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+        {}
+</annotation>
+"""
+Object = """
+	<object>
+		<name>{}</name>
+		<pose>Left</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>{}</xmin>
+			<ymin>{}</ymin>
+			<xmax>{}</xmax>
+			<ymax>{}</ymax>
+		</bndbox>
+	</object>
+"""
 
 # colors for the bboxes
 COLORS = ['#FFD700', '#FF69B4', '#DDA0DD', '#00FF00', '#008000', '#FFA500', '#DC143C',
@@ -36,9 +78,6 @@ COLORS = ['#FFD700', '#FF69B4', '#DDA0DD', '#00FF00', '#008000', '#FFA500', '#DC
 # image sizes for the examples
 SIZE = 256, 256
 
-class_name = ['cervical']
-
-SINGLE = True
 
 class LabelTool():
     def __init__(self, master):
@@ -51,6 +90,7 @@ class LabelTool():
 
         # initialize global state
         self.imageDir = ''
+        self.annoDir = ''
         self.imageList = []
         self.egDir = ''
         self.egList = []
@@ -59,8 +99,10 @@ class LabelTool():
         self.total = 0
         self.category = 0
         self.tkimg = None
-        self.imageHeight = 600
+        self.imageDstHeight = 600
         self.imageScale = None
+        self.imageOriginHeight = 0
+        self.imageOriginWidth = 0
 
         # initialize mouse state
         self.STATE = {}
@@ -74,7 +116,7 @@ class LabelTool():
         self.bboxList = []
         self.hl = None
         self.vl = None
-        self.rel = dict()
+        self.rel = dict()  # key: window_id, value: label id(1,2,3,4,5...)
         self.relc = dict()
         self.selected_obj = None
         self.write_dir = None
@@ -112,6 +154,8 @@ class LabelTool():
         self.btnDe2.grid(row=3, column=2, sticky=W + E + N)
         self.btnDe3 = Button(self.frame, text='Delete', command=self.delObj)
         self.btnDe3.grid(row=4, column=2, sticky=W+E+N)
+        self.btnDe2.pack_forget() # hide Add button
+        self.btnDe3.pack_forget() # hide Add button
 
         # showing bbox info & delete bbox
         self.lb1 = Label(self.frame, text='Bounding boxes:')
@@ -144,12 +188,14 @@ class LabelTool():
         self.frame.columnconfigure(1, weight = 1)
         self.frame.rowconfigure(4, weight = 1)
 
-
     def loadDir(self, dbg=False):
         if not dbg:
             s = self.entry.get()
             self.parent.focus()
             self.imageDir = s
+            self.annoDir = os.path.join( os.path.split(s)[0], 'Annotations')
+            if not os.path.exists(self.annoDir):
+                os.makedirs(self.annoDir)
         else:
             self.imageDir = ''
         if not os.path.isdir(self.imageDir):
@@ -157,7 +203,13 @@ class LabelTool():
            return
         # get image list
         self.imageList = glob.glob(os.path.join(self.imageDir, '*.jpg'))
-        #self.imageList = glob.glob(os.path.join(self.imageDir, '*.JPG'))
+        if len(self.imageList) == 0:
+            self.imageList = glob.glob(os.path.join(self.imageDir, '*.JPG'))
+        if len(self.imageList) == 0:
+            self.imageList = glob.glob(os.path.join(self.imageDir, '*.png'))
+        if len(self.imageList) == 0:
+            self.imageList = glob.glob(os.path.join(self.imageDir, '*.PNG'))
+
         self.imageList.sort()
         if len(self.imageList) == 0:
             print('No .JPG images found in the specified dir')
@@ -167,8 +219,9 @@ class LabelTool():
         self.cur = 1
         self.total = len(self.imageList)
 
-         # set up output dir
-        self.outDir = os.path.join('Labels', os.path.split(self.imageDir)[-1])
+        # set up output dir
+        #self.outDir = os.path.join('Labels', os.path.split(self.imageDir)[-1])
+        self.outDir = self.annoDir 
         if not os.path.exists(self.outDir):
             os.makedirs(self.outDir)
 
@@ -182,7 +235,12 @@ class LabelTool():
                 for (i, line) in enumerate(f):
                     tmp = [t.strip() for t in line.split(',')]
                     self.relc[int(tmp[0])] = tmp[1]
-    
+
+        for i in range(1, len(class_name)+1):
+            color = self.relc[i]
+            self.listbox2.insert(END, class_name[i-1])
+            self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
+
         self.loadImage()
         print('%d images loaded from %s' % (self.total, self.imageDir))
 
@@ -190,68 +248,96 @@ class LabelTool():
         # load image
         imagepath = self.imageList[self.cur - 1]
         img = Image.open(imagepath)
-        self.imageScale = self.imageHeight * 1.0  / img.size[0]
+        self.imageOriginWidth = img.size[0]
+        self.imageOriginHeight = img.size[1]
+        self.imageScale = self.imageDstHeight * 1.0  / img.size[1]
         img = img.resize((int(img.size[0] * self.imageScale), int(img.size[1] * self.imageScale)), Image.ANTIALIAS)
         self.tkimg = ImageTk.PhotoImage(img)
         self.mainPanel.config(width = max(self.tkimg.width(), 400), height = max(self.tkimg.height(), 400))
         self.mainPanel.create_image(0, 0, image = self.tkimg, anchor=NW)
         self.progLabel.config(text="%06d/%06d" % (self.cur, self.total))
-        self.write_dir = os.path.join(self.outDir, os.path.split(imagepath)[-1].split('.')[0])
 
+        #self.write_dir = os.path.join(self.outDir, os.path.split(imagepath)[-1].split('.')[0])
+   
         # load labels
         self.clearBBox()
-        if os.path.isdir(self.write_dir):
-            curr_labels = glob.glob(os.path.join(self.write_dir, '*.txt'))
-            if len(curr_labels) > 0:
-            	curr_labels.sort()
-                self.clearObj()
-                for label_name in curr_labels:
-                    id_index = int(os.path.split(label_name)[-1].split('.')[0])
-                    color = self.relc[id_index]
+        filename = os.path.join(self.annoDir, '{:0>6}.xml'.format(self.cur - 1))
+        if not os.path.exists(filename):
+            return
 
-                    lines = []
-                    with open(label_name, 'r') as f:
-                        for line in f.readlines():
-                            tmp = [int(t.strip()) for t in line.split(',')]
-                            tmpId = self.mainPanel.create_rectangle(int(self.imageScale * tmp[0]), 
-                                                                    int(self.imageScale * tmp[1]),
-                                                                    int(self.imageScale * tmp[2]), 
-                                                                    int(self.imageScale * tmp[3]),
-                                                                    width=2,
-                                                                    outline=color)
-                            tmp_btnId = self.createButton(self.mainPanel, (int(self.imageScale * tmp[0]), int(self.imageScale * tmp[1])))
+        bboxes, labels = self.readXML(filename)
+        for box, label in zip(bboxes, labels):
+            id_index = -1 # start from 1
+            for index, name in enumerate(class_name):
+                if name == label:
+                    id_index = index + 1
+            assert (id_index > 0), "Unknown label name in Annotations/{}.xml".format(self.imageList[self.cur - 1])
+            color = self.relc[id_index]
 
-                            self.bboxList.append(tuple(tmp))
-                            self.bboxIdList.append(tmpId)
-                            self.bboxBtnIdList.append(tmp_btnId)
-                            self.listbox.insert(END, '(%d, %d, %d, %d)' % (tmp[0], tmp[1], tmp[2], tmp[3]))
-                            self.listbox.itemconfig(len(self.bboxIdList) - 1, fg=color)
-                            self.rel[tmpId] = id_index
+            tmpId = self.mainPanel.create_rectangle(int(self.imageScale * box[0]), 
+                                                    int(self.imageScale * box[1]),
+                                                    int(self.imageScale * box[2]), 
+                                                    int(self.imageScale * box[3]),
+                                                    width=2,
+                                                    outline=color)
+            tmp_btnId = self.createButton(self.mainPanel, (int(self.imageScale * box[0]), int(self.imageScale * box[1])))
+            self.bboxList.append(tuple(box))
+            self.bboxIdList.append(tmpId)
+            self.bboxBtnIdList.append(tmp_btnId)
+            self.listbox.insert(END, '(%d, %d, %d, %d)' % (box[0], box[1], box[2], box[3]))
+            self.listbox.itemconfig(len(self.bboxIdList) - 1, fg=color)
+            self.rel[tmpId] = id_index
 
-                for i in range(1, len(class_name)+1):
-                    color = self.relc[i]
-                    self.listbox2.insert(END, class_name[i-1])
-                    self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
-        else:
-            os.mkdir(self.write_dir)
-            # add class_name
-            if self.num == 0:
-                for i in range(len(class_name)):
-                    self.addObj()
+
+            #os.mkdir(self.write_dir)
+            ## add class_name
+            #if self.num == 0:
+            #    for i in range(len(class_name)):
+            #        self.addObj()
 
     def saveImage(self):
-        shutil.rmtree(self.write_dir)
-        os.mkdir(self.write_dir)
+        """
+        self.bboxList -> ***.xml
+        """
+        imagepath = self.imageList[self.cur - 1]
+        filename = os.path.split(imagepath)[1][:-4]
+
+        width, height = self.imageOriginWidth, self.imageOriginHeight
+        objs = ""
         for bbox, idx in zip(self.bboxList, self.bboxIdList):
             id_index = self.rel[idx]
-            with open(os.path.join(self.write_dir, str(id_index) + '.txt'), 'a') as f:
-                f.write(','.join(map(str, bbox)) + '\n')
-        with open(os.path.join(self.outDir, '.col.txt'), 'w') as f:
-            for k, v in self.relc.items():
-                f.write('%d,%s\n' % (k, v))
-        with open(os.path.join(self.outDir, '.num.txt'), 'w') as f:
-            f.write(str(self.num))
+            name = class_name[id_index - 1]
+            assert(len(bbox) == 4)
+            x1 = bbox[0]
+            y1 = bbox[1]
+            x2 = bbox[2]
+            y2 = bbox[3]
+            xmin = min(x1, x2)
+            xmax = max(x1, x2)
+            ymin = min(y1, y2)
+            ymax = max(y1, y2)
+
+            xmin = max(0, xmin) + 1
+            xmax = min(width, xmax)
+            ymin = max(0, ymin) + 1 
+            ymax = min(height, ymax)
+            newObj = copy.deepcopy(Object).format(name, xmin, ymin, xmax, ymax)
+            objs += newObj
+        newAnno = copy.deepcopy(Annnotation).format(filename, width, height, objs)
+        xmlfile = self.annoDir + '/{}.xml'.format(filename)
+
+        if os.path.exists(xmlfile):
+            os.remove(xmlfile)
+        with open(xmlfile, 'w') as fid:
+            fid.write(newAnno)
         print('Image No. %d saved' % self.cur)
+
+        if not os.path.exists(os.path.join(self.outDir, '.col.txt')):
+            with open(os.path.join(self.outDir, '.col.txt'), 'w') as f:
+                for k, v in self.relc.items():
+                    f.write('%d,%s\n' % (k, v))
+            with open(os.path.join(self.outDir, '.num.txt'), 'w') as f:
+                f.write(str(self.num))
 
     def mouseClick(self, event):
         sel = self.listbox2.curselection()
@@ -408,6 +494,37 @@ class LabelTool():
                 break
         print "delete: ", idx, pos
         self.delBBox(idx)
+
+    def readXML(self, filename):
+        """
+        return bboxes, labels
+        """
+        assert os.path.exists(filename)
+
+        tree = ET.parse(filename)
+        objs = tree.findall('object')
+        num_objs = len(objs)
+        boxes = [] 
+        labels = []
+
+        # Load object bounding boxes into a data frame.
+        for ix, obj in enumerate(objs):
+            bbox = obj.find('bndbox')
+            # Make pixel indexes 0-based
+            x1 = int(bbox.find('xmin').text) - 1
+            y1 = int(bbox.find('ymin').text) - 1
+            x2 = int(bbox.find('xmax').text) - 1
+            y2 = int(bbox.find('ymax').text) - 1
+
+            x1 = min(x1, x2)
+            y1 = min(y1, y2)
+            x2 = max(x1, x2)
+            y2 = max(y1, y2)
+
+            boxes.append([x1, y1, x2, y2])
+            labels.append(obj.find('name').text.lower())
+
+        return boxes, labels
 
 if __name__ == '__main__':
     root = Tk()
