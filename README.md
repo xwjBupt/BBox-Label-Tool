@@ -1,7 +1,18 @@
+# Usage
+
+```
+python tools/createDS.py
+python main_voc.py
+python tools/createSplit.py
+```
+
+---
+
 # Extension
 
 1. Add multi-bboxes for one class in one image.
 2. Add voc2007 convert tool.
+3. Create voc-format directly.
 
 ---
 
