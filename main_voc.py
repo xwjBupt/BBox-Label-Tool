@@ -5,9 +5,9 @@
 # Purpose:     Label object bboxes for ImageNet Detection data
 # Author:      Qiushi
 # Created:     06/06/2014
-
-#
+# Revised:     Duino
 #-------------------------------------------------------------------------------
+
 from __future__ import division
 try:
     # for Python2
@@ -22,15 +22,6 @@ import glob
 import shutil
 import xml.etree.ElementTree as ET
 import copy
-
-#class_name = ['cervical']
-#SINGLE = True
-
-#class_name = ['insulator', 'hammer', 'tower', 'nest', 'text']
-#SINGLE = False
-
-#class_name = ['head']
-#SINGLE = True
 
 CFG_FILE='.bbox_label.txt'
 
@@ -89,9 +80,8 @@ class LabelTool():
         # load cfg_file
         self.cfg = {}
         self.read_cfg()
-        print self.cfg
-
-        #return
+        print "cfg:"
+        print cfg
 
         # set up the main frame
         self.parent = master
@@ -107,7 +97,7 @@ class LabelTool():
         self.egDir = ''
         self.egList = []
         self.outDir = ''
-        self.cur = 0
+        self.cur = 1
         self.total = 0
         self.category = 0
         self.tkimg = None
@@ -257,7 +247,7 @@ class LabelTool():
 
     def loadImage(self):
         # load image
-        imagepath = self.imageList[self.cur - 1]
+        imagepath = self.imageList[self.cur]
         img = Image.open(imagepath)
         self.imageOriginWidth = img.size[0]
         self.imageOriginHeight = img.size[1]
@@ -272,7 +262,7 @@ class LabelTool():
    
         # load labels
         self.clearBBox()
-        filename = os.path.join(self.annoDir, '{:0>6}.xml'.format(self.cur - 1))
+        filename = os.path.join(self.annoDir, '{:0>6}.xml'.format(self.cur))
         if not os.path.exists(filename):
             return
 
@@ -282,7 +272,7 @@ class LabelTool():
             for index, name in enumerate(self.class_name):
                 if name == label:
                     id_index = index + 1
-            assert (id_index > 0), "Unknown label name in Annotations/{}.xml".format(self.imageList[self.cur - 1])
+            assert (id_index > 0), "Unknown label name in Annotations/{}.xml".format(self.imageList[self.cur])
             color = self.relc[id_index]
 
             tmpId = self.mainPanel.create_rectangle(int(self.imageScale * box[0]), 
@@ -315,7 +305,7 @@ class LabelTool():
         """
         self.bboxList -> ***.xml
         """
-        imagepath = self.imageList[self.cur - 1]
+        imagepath = self.imageList[self.cur-1]
         filename = os.path.split(imagepath)[1][:-4]
 
         width, height = self.imageOriginWidth, self.imageOriginHeight
