@@ -23,15 +23,20 @@ import shutil
 import xml.etree.ElementTree as ET
 import copy
 
-class_name = ['cervical']
-SINGLE = True
+#class_name = ['cervical']
+#SINGLE = True
 
 #class_name = ['insulator', 'hammer', 'tower', 'nest', 'text']
 #SINGLE = False
 
+#class_name = ['head']
+#SINGLE = True
+
+CFG_FILE='.bbox_label.txt'
+
 # xml template
 Annnotation = """<annotation>
-	<folder>DuinoDu</folder>
+	<folder>BBoxLabel</folder>
 	<filename>{}</filename>
 	<source>
 		<database>The VOC2007 Database</database>
@@ -78,19 +83,26 @@ COLORS = ['#FFD700', '#FF69B4', '#DDA0DD', '#00FF00', '#008000', '#FFA500', '#DC
 # image sizes for the examples
 SIZE = 256, 256
 
-
 class LabelTool():
     def __init__(self, master):
+
+        # load cfg_file
+        self.cfg = {}
+        self.read_cfg()
+        print self.cfg
+
+        #return
+
         # set up the main frame
         self.parent = master
-        self.parent.title("SeqLabelTool")
+        self.parent.title("Lable tool for {}".format(self.cfg['dataset_name']))
         self.frame = Frame(self.parent)
         self.frame.pack(fill=BOTH, expand=1)
         self.parent.resizable(width=FALSE, height=FALSE)
 
         # initialize global state
-        self.imageDir = ''
-        self.annoDir = ''
+        self.imageDir = os.path.join(self.cfg['dataset_save_path'], self.cfg['dataset_name']+self.cfg['year'], 'JPEGImages')
+        self.annoDir = os.path.join(self.cfg['dataset_save_path'], self.cfg['dataset_name']+self.cfg['year'], 'Annotations')
         self.imageList = []
         self.egDir = ''
         self.egList = []
@@ -130,10 +142,11 @@ class LabelTool():
         self.ldBtn = Button(self.frame, text = "Load", command = self.loadDir)
         self.ldBtn.grid(row = 0, column = 2, sticky = W+E)
 
-        # set default entry
-        import sys
-        if len(sys.argv) == 2:
-            self.entry.insert(0, sys.argv[1])
+        ## set default entry
+        #import sys
+        #if len(sys.argv) == 2:
+        #    self.entry.insert(0, sys.argv[1])
+        self.entry.insert(0, self.cfg['image_path'])
 
         # main panel for labeling
         self.mainPanel = Canvas(self.frame, cursor='tcross')
@@ -150,9 +163,9 @@ class LabelTool():
         self.lb2.grid(row=1, column=2, sticky=W+N)
         self.listbox2 = Listbox(self.frame, width=22, height=12)
         self.listbox2.grid(row=2, column=2, sticky=N)
-        self.btnDe2 = Button(self.frame, text='Add', command=self.addObj)
+        self.btnDe2 = Button(self.frame, text='Add')
         self.btnDe2.grid(row=3, column=2, sticky=W + E + N)
-        self.btnDe3 = Button(self.frame, text='Delete', command=self.delObj)
+        self.btnDe3 = Button(self.frame, text='Delete')
         self.btnDe3.grid(row=4, column=2, sticky=W+E+N)
         self.btnDe2.pack_forget() # hide Add button
         self.btnDe3.pack_forget() # hide Add button
@@ -188,12 +201,18 @@ class LabelTool():
         self.frame.columnconfigure(1, weight = 1)
         self.frame.rowconfigure(4, weight = 1)
 
+    def read_cfg(self):
+        cfg_file = os.path.join(os.environ['HOME'], CFG_FILE)
+        if not os.path.exists(cfg_file):
+            raise IOError, "No found config file {}, run tool/createDS.py first.".format(cfg_file)
+
+        with open(cfg_file, 'r') as fid:
+            for line in [x.split('\n')[0] for x in fid.readlines()]:
+                name, value = line.split(':')
+                self.cfg[name] = value
+
     def loadDir(self, dbg=False):
         if not dbg:
-            s = self.entry.get()
-            self.parent.focus()
-            self.imageDir = s
-            self.annoDir = os.path.join( os.path.split(s)[0], 'Annotations')
             if not os.path.exists(self.annoDir):
                 os.makedirs(self.annoDir)
         else:
@@ -212,33 +231,25 @@ class LabelTool():
 
         self.imageList.sort()
         if len(self.imageList) == 0:
-            print('No .JPG images found in the specified dir')
+            print('No .JPG(jpg png PNG) images found in the specified dir')
             return
 
         # default to the 1st image in the collection
-        self.cur = 1
+        self.cur = int(self.cfg['current_index'])
         self.total = len(self.imageList)
 
         # set up output dir
-        #self.outDir = os.path.join('Labels', os.path.split(self.imageDir)[-1])
         self.outDir = self.annoDir 
         if not os.path.exists(self.outDir):
             os.makedirs(self.outDir)
 
+        self.class_name = []
         self.num = 0
-        if os.path.exists(os.path.join(self.outDir, '.num.txt')):
-            with open(os.path.join(self.outDir, '.num.txt'), 'r') as f:
-                self.num = int(f.readline())
+        self.addObjs()
 
-        if os.path.exists(os.path.join(self.outDir, '.col.txt')):
-            with open(os.path.join(self.outDir, '.col.txt'), 'r') as f:
-                for (i, line) in enumerate(f):
-                    tmp = [t.strip() for t in line.split(',')]
-                    self.relc[int(tmp[0])] = tmp[1]
-
-        for i in range(1, len(class_name)+1):
+        for i in range(1, len(self.class_name)+1):
             color = self.relc[i]
-            self.listbox2.insert(END, class_name[i-1])
+            self.listbox2.insert(END, self.class_name[i-1])
             self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
 
         self.loadImage()
@@ -268,7 +279,7 @@ class LabelTool():
         bboxes, labels = self.readXML(filename)
         for box, label in zip(bboxes, labels):
             id_index = -1 # start from 1
-            for index, name in enumerate(class_name):
+            for index, name in enumerate(self.class_name):
                 if name == label:
                     id_index = index + 1
             assert (id_index > 0), "Unknown label name in Annotations/{}.xml".format(self.imageList[self.cur - 1])
@@ -289,11 +300,16 @@ class LabelTool():
             self.rel[tmpId] = id_index
 
 
-            #os.mkdir(self.write_dir)
             ## add class_name
             #if self.num == 0:
             #    for i in range(len(class_name)):
             #        self.addObj()
+            #    if not os.path.exists(os.path.join(self.outDir, '.col.txt')):
+            #        with open(os.path.join(self.outDir, '.col.txt'), 'w') as f:
+            #            for k, v in self.relc.items():
+            #                f.write('%d,%s\n' % (k, v))
+            #        with open(os.path.join(self.outDir, '.num.txt'), 'w') as f:
+            #            f.write(str(self.num))
 
     def saveImage(self):
         """
@@ -306,7 +322,7 @@ class LabelTool():
         objs = ""
         for bbox, idx in zip(self.bboxList, self.bboxIdList):
             id_index = self.rel[idx]
-            name = class_name[id_index - 1]
+            name = self.class_name[id_index - 1]
             assert(len(bbox) == 4)
             x1 = bbox[0]
             y1 = bbox[1]
@@ -332,24 +348,24 @@ class LabelTool():
             fid.write(newAnno)
         print('Image No. %d saved' % self.cur)
 
-        if not os.path.exists(os.path.join(self.outDir, '.col.txt')):
-            with open(os.path.join(self.outDir, '.col.txt'), 'w') as f:
-                for k, v in self.relc.items():
-                    f.write('%d,%s\n' % (k, v))
-            with open(os.path.join(self.outDir, '.num.txt'), 'w') as f:
-                f.write(str(self.num))
+        #if not os.path.exists(os.path.join(self.outDir, '.col.txt')):
+        #    with open(os.path.join(self.outDir, '.col.txt'), 'w') as f:
+        #        for k, v in self.relc.items():
+        #            f.write('%d,%s\n' % (k, v))
+        #    with open(os.path.join(self.outDir, '.num.txt'), 'w') as f:
+        #        f.write(str(self.num))
 
     def mouseClick(self, event):
         sel = self.listbox2.curselection()
-        if len(sel) != 1 and len(class_name) > 1:
+        if len(sel) != 1 and len(self.class_name) > 1:
             tkMessageBox.showerror("Error!", message="The specified bbox must be linked to an obj index!")
             self.mainPanel.delete(self.bboxId)
             self.STATE['click'] = 0
             return
-        elif len(class_name) == 1:
+        elif len(self.class_name) == 1:
             sel = [self.listbox2.index(0)]
 
-        for index, e in enumerate(class_name):
+        for index, e in enumerate(self.class_name):
             if e == self.listbox2.get(sel[0]):
                 self.selected_obj = index + 1
 
@@ -372,7 +388,7 @@ class LabelTool():
             self.rel[self.bboxId] = self.selected_obj
             self.listbox2.selection_clear(0, self.listbox2.size())
             self.bboxId = None
-            if SINGLE:
+            if self.SINGLE:
                 self.nextImage()
         self.STATE['click'] = 1 - self.STATE['click']
 
@@ -424,13 +440,18 @@ class LabelTool():
         self.bboxList = []
         self.rel.clear()
 
-    def addObj(self):
-        self.num += 1
-        id_index = self.num
-        color = COLORS[id_index % len(COLORS)]
-        self.relc[id_index] = color
-        self.listbox2.insert(END, class_name[id_index-1])
-        self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
+    def addObjs(self):
+        self.class_name = self.cfg['classes_name'].split(',')
+        self.num = len(self.class_name)
+        for id_index in xrange(1, self.num+1):
+            color = COLORS[id_index % len(COLORS)]
+            self.relc[id_index] = color
+            self.listbox2.insert(END, self.class_name[id_index-1])
+            self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
+        if self.num == 1:
+            self.SINGLE = self.cfg['if_single']
+        else:
+            self.SINGLE = False
 
     def delObj(self):
         sel = self.listbox2.curselection()
