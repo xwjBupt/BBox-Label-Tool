@@ -81,7 +81,7 @@ class LabelTool():
         self.cfg = {}
         self.read_cfg()
         print "cfg:"
-        print cfg
+        print self.cfg
 
         # set up the main frame
         self.parent = master
