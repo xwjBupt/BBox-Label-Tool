@@ -1,0 +1,7 @@
+dataset_name:LION
+year:2017
+image_path:/home/cv/Pictures
+dataset_save_path:/home/cv/data/VOCdevkit
+classes_name:a,b,c,d
+if_single:False
+current_index:0

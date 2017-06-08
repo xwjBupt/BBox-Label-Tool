@@ -192,9 +192,13 @@ class LabelTool():
         self.frame.rowconfigure(4, weight = 1)
 
     def read_cfg(self):
-        cfg_file = os.path.join(os.environ['HOME'], CFG_FILE)
+        if len(sys.argv) == 2:
+            cfg_file = os.path.abspath(sys.argv[1])
+        else:
+            cfg_file = os.path.join(os.environ['HOME'], CFG_FILE)
+
         if not os.path.exists(cfg_file):
-            raise IOError, "No found config file {}, run tool/createDS.py first.".format(cfg_file)
+            raise IOError, "No found config file {}, run tool/createDS.py first.\n Or you can set config file in \"main_voc.py [cfg_path]\"".format(cfg_file)
 
         with open(cfg_file, 'r') as fid:
             for line in [x.split('\n')[0] for x in fid.readlines()]:
@@ -239,7 +243,7 @@ class LabelTool():
 
         for i in range(1, len(self.class_name)+1):
             color = self.relc[i]
-            self.listbox2.insert(END, self.class_name[i-1])
+            #self.listbox2.insert(END, self.class_name[i-1]) # if add, there will be double class name in the list box
             self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
 
         self.loadImage()
@@ -247,7 +251,10 @@ class LabelTool():
 
     def loadImage(self):
         # load image
-        imagepath = self.imageList[self.cur]
+        if self.cur-1 == len(self.imageList):
+            print "Finish"
+            return
+        imagepath = self.imageList[self.cur-1]
         img = Image.open(imagepath)
         self.imageOriginWidth = img.size[0]
         self.imageOriginHeight = img.size[1]
@@ -262,17 +269,18 @@ class LabelTool():
    
         # load labels
         self.clearBBox()
-        filename = os.path.join(self.annoDir, '{:0>6}.xml'.format(self.cur))
+        filename = os.path.join(self.annoDir, '{:0>6}.xml'.format(self.cur-1))
         if not os.path.exists(filename):
             return
 
         bboxes, labels = self.readXML(filename)
+
         for box, label in zip(bboxes, labels):
             id_index = -1 # start from 1
             for index, name in enumerate(self.class_name):
                 if name == label:
                     id_index = index + 1
-            assert (id_index > 0), "Unknown label name in Annotations/{}.xml".format(self.imageList[self.cur])
+            assert (id_index > 0), "Unknown label name in Annotations/{}.xml".format(self.imageList[self.cur-1])
             color = self.relc[id_index]
 
             tmpId = self.mainPanel.create_rectangle(int(self.imageScale * box[0]), 

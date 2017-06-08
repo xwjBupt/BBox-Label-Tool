@@ -1,9 +1,17 @@
 # Usage
 
+### Create from zero
 ```
 python tools/createDS.py
 python main_voc.py
 python tools/createSplit.py
+```
+
+### Read from an existing dataset
+```
+cp sample.bbox_label.txt [dataset dir]
+# edit sample.bbox_label.txt
+python main_voc.py [dataset dir]/sample.bbox_label.txt
 ```
 
 ---
