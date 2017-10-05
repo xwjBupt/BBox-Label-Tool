@@ -446,8 +446,8 @@ class LabelTool():
             self.relc[id_index] = color
             self.listbox2.insert(END, self.class_name[id_index-1])
             self.listbox2.itemconfig(self.listbox2.size() - 1, fg=color)
-        if self.num == 1:
-            self.SINGLE = self.cfg['if_single']
+        if self.num == 1 and self.cfg['if_single'] == 'True':
+                self.SINGLE = True
         else:
             self.SINGLE = False
 
