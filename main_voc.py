@@ -251,10 +251,10 @@ class LabelTool():
 
     def loadImage(self):
         # load image
-        if self.cur-1 == len(self.imageList):
+        if self.cur > len(self.imageList):
             print "Finish"
             return
-        imagepath = self.imageList[self.cur-1]
+        imagepath = self.imageList[self.cur-1] # self.cur is 1-based
         img = Image.open(imagepath)
         self.imageOriginWidth = img.size[0]
         self.imageOriginHeight = img.size[1]
@@ -269,7 +269,7 @@ class LabelTool():
    
         # load labels
         self.clearBBox()
-        filename = os.path.join(self.annoDir, '{:0>6}.xml'.format(self.cur-1))
+        filename = os.path.join(self.annoDir, '{:0>6}.xml'.format(self.cur))
         if not os.path.exists(filename):
             return
 
@@ -280,7 +280,7 @@ class LabelTool():
             for index, name in enumerate(self.class_name):
                 if name == label:
                     id_index = index + 1
-            assert (id_index > 0), "Unknown label name in Annotations/{}.xml".format(self.imageList[self.cur-1])
+            assert (id_index > 0), "Unknown label name in Annotations/{}.xml".format(self.imageList[self.cur])
             color = self.relc[id_index]
 
             tmpId = self.mainPanel.create_rectangle(int(self.imageScale * box[0]), 
@@ -486,6 +486,9 @@ class LabelTool():
         if self.cur < self.total:
             self.cur += 1
             self.loadImage()
+        else:
+            print "Finish"
+
 
     def gotoImage(self):
         self.listbox2.selection_clear(0, self.listbox2.size())
