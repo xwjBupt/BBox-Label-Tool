@@ -60,7 +60,7 @@ Object = """
 """
 
 # colors for the bboxes
-COLORS = ['#FFD700', '#FF69B4', '#DDA0DD', '#00FF00', '#008000', '#FFA500', '#DC143C',
+COLORS = ['#90EE90', '#B22222', '#DDA0DD', '#00FF00', '#008000', '#D2691E', '#DC143C',
           '#C0C0C0', '#FFE4C4', '#32CD32', '#8B008B', '#6495ED', '#8A2BE2', '#EE82EE',
           '#FF00FF', '#006400', '#7FFF00', '#FF00FF', '#0000CD', '#FF8C00', '#FFEFD5',
           '#C71585', '#7CFC00', '#9370DB', '#6A5ACD', '#B0C4DE', '#4169E1', '#ADFF2F',
@@ -105,6 +105,7 @@ class LabelTool():
         self.imageScale = None
         self.imageOriginHeight = 0
         self.imageOriginWidth = 0
+        self.btn_bg = PhotoImage(file='btn_bg.png')
 
         # initialize mouse state
         self.STATE = {}
@@ -205,6 +206,21 @@ class LabelTool():
                 name, value = line.split(':')
                 self.cfg[name] = value
 
+    def write_cfg(self):
+        if len(sys.argv) == 2:
+            cfg_file = os.path.abspath(sys.argv[1])
+        else:
+            cfg_file = os.path.join(os.environ['HOME'], CFG_FILE)
+        if not os.path.exists(cfg_file):
+            raise IOError, "No found config file {}, run tool/createDS.py first.\n Or you can set config file in \"main_voc.py [cfg_path]\"".format(cfg_file)
+
+        with open(cfg_file, 'w') as fid:
+            for (name, value) in self.cfg.items():
+                fid.write(name)
+                fid.write(':')
+                fid.write(value)
+                fid.write('\n')
+
     def loadDir(self, dbg=False):
         if not dbg:
             if not os.path.exists(self.annoDir):
@@ -289,10 +305,10 @@ class LabelTool():
                                                     int(self.imageScale * box[3]),
                                                     width=2,
                                                     outline=color)
-            tmp_btnId = self.createButton(self.mainPanel, (int(self.imageScale * box[0]), int(self.imageScale * box[1])))
+            #tmp_btnId = self.createButton(self.mainPanel, (int(self.imageScale * box[0]), int(self.imageScale * box[1])))
             self.bboxList.append(tuple(box))
             self.bboxIdList.append(tmpId)
-            self.bboxBtnIdList.append(tmp_btnId)
+            #self.bboxBtnIdList.append(tmp_btnId)
             self.listbox.insert(END, '(%d, %d, %d, %d)' % (box[0], box[1], box[2], box[3]))
             self.listbox.itemconfig(len(self.bboxIdList) - 1, fg=color)
             self.rel[tmpId] = id_index
@@ -331,10 +347,10 @@ class LabelTool():
             ymin = min(y1, y2)
             ymax = max(y1, y2)
 
-            xmin = max(0, xmin) + 1
-            xmax = min(width, xmax)
-            ymin = max(0, ymin) + 1 
-            ymax = min(height, ymax)
+            xmin = max(1, xmin+1)
+            xmax = min(width, xmax+1)
+            ymin = max(1, ymin+1) 
+            ymax = min(height, ymax+1)
             newObj = copy.deepcopy(Object).format(name, xmin, ymin, xmax, ymax)
             objs += newObj
         newAnno = copy.deepcopy(Annnotation).format(filename, width, height, objs)
@@ -352,6 +368,9 @@ class LabelTool():
         #            f.write('%d,%s\n' % (k, v))
         #    with open(os.path.join(self.outDir, '.num.txt'), 'w') as f:
         #        f.write(str(self.num))
+
+        self.cfg['current_index'] = str(self.cur)
+        self.write_cfg()
 
     def mouseClick(self, event):
         sel = self.listbox2.curselection()
@@ -425,8 +444,8 @@ class LabelTool():
         self.mainPanel.delete(self.bboxIdList[idx])
         self.bboxList.pop(idx)
         self.bboxIdList.pop(idx)
-        self.mainPanel.delete(self.bboxBtnIdList[idx])
-        self.bboxBtnIdList.pop(idx)
+        #self.mainPanel.delete(self.bboxBtnIdList[idx])
+        #self.bboxBtnIdList.pop(idx)
         self.listbox.delete(idx)
         self.rel.pop(tmpId)
 
@@ -489,7 +508,6 @@ class LabelTool():
         else:
             print "Finish"
 
-
     def gotoImage(self):
         self.listbox2.selection_clear(0, self.listbox2.size())
         idx = int(self.idxEntry.get())
@@ -499,7 +517,7 @@ class LabelTool():
             self.loadImage()
     
     def createButton(self, canvas, pos, _text="Del"):
-        button = Button(self.frame, text=_text, anchor=W, command=lambda: self.delBBoxByBtn(pos) )
+        button = Button(self.frame, text=_text, anchor=W, command=lambda: self.delBBoxByBtn(pos))
         button.configure(width=10, activebackground="#33B5E5", relief=FLAT)
         return canvas.create_window(pos[0], pos[1], anchor=NW, window=button, height=30, width=50)
 
