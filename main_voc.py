@@ -403,7 +403,7 @@ class LabelTool():
             self.listbox.insert(END, '(%d, %d, %d, %d)' % (x1, y1, x2, y2))
             self.listbox.itemconfig(len(self.bboxIdList) - 1, fg=self.relc[self.selected_obj])
             self.rel[self.bboxId] = self.selected_obj
-            self.listbox2.selection_clear(0, self.listbox2.size())
+            #self.listbox2.selection_clear(0, self.listbox2.size())
             self.bboxId = None
             if self.SINGLE:
                 self.nextImage()
