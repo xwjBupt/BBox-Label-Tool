@@ -7,6 +7,7 @@ import os, sys
 import xml.etree.ElementTree as ET
 import random
 import shutil
+import tqdm
 
 CFG_FILE = os.path.join(os.environ['HOME'], '.bbox_label.txt')
 
@@ -41,15 +42,17 @@ def createSplit(args):
         print("You'd better finish label task and then create split dataset\n")
 
     splitPath = os.path.join(root, 'ImageSets/Main')
-    if not os.path.exists(splitPath):
-        os.makedirs(splitPath)
-    else:
+    if os.path.exists(splitPath):
         shutil.rmtree(splitPath)
+    os.makedirs(splitPath)
 
     def get_filenames(classname):
         filenames = []
         files = sorted([x for x in os.listdir(annoPath) if not x.startswith('.')])
+        t = tqdm.tqdm()
+        t.total = len(files)
         for f in files:
+            t.update()
             tree = ET.parse(os.path.join(annoPath, f))
             objs = tree.findall('object')
             if classname in [x.find('name').text.lower().strip() for x in objs]:
@@ -85,21 +88,25 @@ def createSplit(args):
             lines = []
             for f in files:
                 with open(os.path.join(splitPath, f), 'r') as fid:
-                    lines += [x[:7]+'\n' for x in fid.readlines()]
+                    for line in fid.readlines():
+                        if line[:7] not in lines:
+                            lines += line[:7] 
             with open(os.path.join(splitPath, '{}.txt'.format(t)), 'w') as fid:
                 for line in lines:
-                    fid.write(line)
+                    fid.write(line+'\n')
 
     class_names = [x for x in cfg['classes_name'].split(',')] 
     for name in class_names:
         print('Creating {} dataset...'.format(name))
+        print('Fetching filenames of {}...'.format(name))
         filenames = get_filenames(name)  # find image_ind that contains current class
         if args.shuffle:
             random.shuffle(filenames)
+        print('Writing to files...')
         createImageSet(filenames, name)
+    print('Converging...')
     converge()
     print('Done!')
-
 
 def main(args):
     createSplit(args)
