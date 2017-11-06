@@ -90,7 +90,7 @@ def createSplit(args):
                 with open(os.path.join(splitPath, f), 'r') as fid:
                     for line in fid.readlines():
                         if line[:7] not in lines:
-                            lines += line[:7] 
+                            lines.append(line[:7]) 
             with open(os.path.join(splitPath, '{}.txt'.format(t)), 'w') as fid:
                 for line in lines:
                     fid.write(line+'\n')
