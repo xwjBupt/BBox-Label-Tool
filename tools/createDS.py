@@ -169,7 +169,7 @@ Please answer the following questions.
         fid.write('dataset_save_path:{}\n'.format(CONF['dataset_save_path']))
         fid.write('classes_name:{}\n'.format(CONF['classes_name']))
         fid.write('if_single:{}\n'.format(CONF['if_single']))
-        fid.write('current_index:{}\n'.format(0))
+        fid.write('current_index:{}\n'.format(1))
 
     createJPEGImages()
 
