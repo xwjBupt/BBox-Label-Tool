@@ -9,6 +9,7 @@
 #-------------------------------------------------------------------------------
 
 from __future__ import division
+from __future__ import print_function
 try:
     # for Python2
     from Tkinter import *   ## notice capitalized T in Tkinter 
@@ -22,8 +23,9 @@ import glob
 import shutil
 import xml.etree.ElementTree as ET
 import copy
+import argparse
 
-CFG_FILE='.bbox_label.txt'
+CFG_FILE = os.path.join(os.environ['HOME'], '.bbox_label.txt')
 
 # xml template
 Annnotation = """<annotation>
@@ -75,13 +77,20 @@ COLORS = ['#90EE90', '#B22222', '#DDA0DD', '#00FF00', '#008000', '#D2691E', '#DC
 SIZE = 256, 256
 
 class LabelTool():
-    def __init__(self, master):
+    def __init__(self, master, args):
+        self.args = args
 
         # load cfg_file
         self.cfg = {}
         self.read_cfg()
-        print "cfg:"
-        print self.cfg
+        print("cfg:")
+        print(self.cfg)
+
+        # read imglist if necessary
+        self.imglist = []
+        if args.imglist != '':
+            self.imglist = [int(x.strip()) for x in open(args.imglist, 'r').readlines()]
+            
 
         # set up the main frame
         self.parent = master
@@ -193,11 +202,7 @@ class LabelTool():
         self.frame.rowconfigure(4, weight = 1)
 
     def read_cfg(self):
-        if len(sys.argv) == 2:
-            cfg_file = os.path.abspath(sys.argv[1])
-        else:
-            cfg_file = os.path.join(os.environ['HOME'], CFG_FILE)
-
+        cfg_file = self.args.cfg
         if not os.path.exists(cfg_file):
             raise IOError, "No found config file {}, run tool/createDS.py first.\n Or you can set config file in \"main_voc.py [cfg_path]\"".format(cfg_file)
 
@@ -207,10 +212,7 @@ class LabelTool():
                 self.cfg[name] = value
 
     def write_cfg(self):
-        if len(sys.argv) == 2:
-            cfg_file = os.path.abspath(sys.argv[1])
-        else:
-            cfg_file = os.path.join(os.environ['HOME'], CFG_FILE)
+        cfg_file = self.args.cfg
         if not os.path.exists(cfg_file):
             raise IOError, "No found config file {}, run tool/createDS.py first.\n Or you can set config file in \"main_voc.py [cfg_path]\"".format(cfg_file)
 
@@ -268,7 +270,7 @@ class LabelTool():
     def loadImage(self):
         # load image
         if self.cur > len(self.imageList):
-            print "Finish"
+            print("Finish")
             return
         imagepath = self.imageList[self.cur-1] # self.cur is 1-based
         img = Image.open(imagepath)
@@ -334,6 +336,7 @@ class LabelTool():
 
         width, height = self.imageOriginWidth, self.imageOriginHeight
         objs = ""
+        print(self.bboxList)
         for bbox, idx in zip(self.bboxList, self.bboxIdList):
             id_index = self.rel[idx]
             name = self.class_name[id_index - 1]
@@ -502,11 +505,19 @@ class LabelTool():
         self.clearBBoxButtons()
         self.listbox2.selection_clear(0, self.listbox2.size())
         self.saveImage()
-        if self.cur < self.total:
-            self.cur += 1
-            self.loadImage()
+
+        if self.args.imglist != '':
+            if len(self.imglist) == 0:
+                print('Finish')
+            else:
+                self.cur = self.imglist.pop()
+                self.loadImage()
         else:
-            print "Finish"
+            if self.cur < self.total:
+                self.cur += 1
+                self.loadImage()
+            else:
+                print("Finish")
 
     def gotoImage(self):
         self.listbox2.selection_clear(0, self.listbox2.size())
@@ -532,7 +543,7 @@ class LabelTool():
             if abs(self.bboxList[i][0] - pos[0]*1.0 / self.imageScale) < eps and abs(self.bboxList[i][1] - pos[1]*1.0 / self.imageScale) < eps:
                 idx = i
                 break
-        print "delete: ", idx, pos
+        print("delete: ", idx, pos)
         self.delBBox(idx)
 
     def readXML(self, filename):
@@ -567,6 +578,12 @@ class LabelTool():
         return boxes, labels
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Label tool')
+    parser.add_argument('--cfg', default=CFG_FILE, type=str, help='bbox config file')
+    parser.add_argument('--imglist', default='', type=str, help='set image list, only load image from the list')
+    args = parser.parse_args()
+
     root = Tk()
-    tool = LabelTool(root)
+    tool = LabelTool(root, args)
     root.mainloop()
+
