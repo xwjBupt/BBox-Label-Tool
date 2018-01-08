@@ -114,7 +114,7 @@ class LabelTool():
         self.imageScale = None
         self.imageOriginHeight = 0
         self.imageOriginWidth = 0
-        self.btn_bg = PhotoImage(file='btn_bg.png')
+        self.btn_bg = PhotoImage(file=os.path.join(os.path.dirname(__file__), 'btn_bg.png'))
 
         # initialize mouse state
         self.STATE = {}

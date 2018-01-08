@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch.utils.data as data
 import xml.etree.ElementTree as ET
+import six
 
 
 class AnnotationTransform(object):
@@ -234,8 +235,95 @@ def drawBar(data, imdb_name):
 
     plt.show()
 
+if six.PY3:
+    str_compat = str
+else:
+    str_compat = unicode
+
+def ask(question, answer=str_compat, default=None, l=None):
+    def _input_compat(prompt):
+        if six.PY3:
+            return input(prompt) 
+        else:
+            return raw_input(prompt)
+
+    if answer == str_compat:
+        r = ''
+        while True:
+            if default:
+                r = _input_compat('> {0} [{1}] '.format(question, default))
+            else:
+                r = _input_compat('> {0} '.format(question, default))
+
+            r = r.strip()
+
+            if len(r) <= 0:
+                if default:
+                    r = default
+                    break
+                else:
+                    print('You must enter something')
+            else:
+                if l and len(r) != l:
+                    print('You must enter a {0} letters long string'.format(l))
+                else:
+                    break
+        return r
+    elif answer == bool:
+        r = None
+        while True:
+            if default is True:
+                r = _input_compat('> {0} (Y/n) '.format(question))
+            elif default is False:
+                r = _input_compat('> {0} (y/N) '.format(question))
+            else:
+                r = _input_compat('> {0} (y/n) '.format(question))
+
+            r = r.strip().lower()
+
+            if r in ('y', 'yes'):
+                r = True
+                break
+            elif r in ('n', 'no'):
+                r = False
+                break
+            elif not r:
+                r = default
+                break
+            else:
+                print("You must answer 'yes' or 'no'")
+        return r
+    elif answer == int:
+        r = None
+        while True:
+            if default:
+                r = _input_compat('> {0} [{1}] '.format(question, default))
+            else:
+                r = _input_compat('> {0} '.format(question))
+
+            r = r.strip()
+
+            if not r:
+                r = default
+                break
+
+            try:
+                r = int(r)
+                break
+            except:
+                print('You must enter an integer')
+        return r
+    else:
+        raise NotImplemented(
+            'Argument  must be str_compat, bool, or integer')
+
 
 def describeDataset(args):
+
+    if not ask('Have you checked Annotations using BBox-Label-Tool/tools/checkAnno.py?', bool, False):
+        print("Please check first.")
+        return
+
     ds_name = os.path.basename(args.dataset_path)
     ds = VOCDetection(args.dataset_path, args.split, target_transform=AnnotationTransform())
 
