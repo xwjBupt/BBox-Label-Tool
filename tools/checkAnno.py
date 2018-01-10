@@ -173,6 +173,13 @@ def checkAnnotations(args):
         for f in bad_list:
             print(f)
 
+    if len(empty_xmls) == 0:
+        print("no empty xml")
+    else:
+        print("empty xml:")
+        for f in empty_xmls:
+            print(f)
+
     print('empty xml sum:', len(empty_xmls))
     if len(empty_xmls) > 0:
         delete = ask("if delete empty xmls and its images?", bool, False)

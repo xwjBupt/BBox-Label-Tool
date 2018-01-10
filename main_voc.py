@@ -89,7 +89,7 @@ class LabelTool():
         # read imglist if necessary
         self.imglist = []
         if args.imglist != '':
-            self.imglist = [int(x.strip()) for x in open(args.imglist, 'r').readlines()]
+            self.imglist = [int(x.strip().split(' ')[0]) for x in open(args.imglist, 'r').readlines()]
             
 
         # set up the main frame
