@@ -103,8 +103,8 @@ def delete_file(xmlfiles, root):
 
         ch = cv2.waitKey(0) & 0xff
         if ch == ord('d'):
-            #os.remove(xmlfile)
-            #os.remove(imgfile.format(filename))
+            os.remove(xmlfile)
+            os.remove(imgfile.format(filename))
             print('delete xml and jpg of {}'.format(filename))
         if ch == 27: #ord('q')
             break

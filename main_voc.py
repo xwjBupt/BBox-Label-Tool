@@ -89,7 +89,7 @@ class LabelTool():
         # read imglist if necessary
         self.imglist = []
         if args.imglist != '':
-            self.imglist = [int(x.strip().split(' ')[0]) for x in open(args.imglist, 'r').readlines()]
+            self.imglist = [int(x.strip().split(' ')[0]) for x in open(args.imglist, 'r').readlines()][::-1]
             
 
         # set up the main frame
@@ -272,7 +272,12 @@ class LabelTool():
         if self.cur > len(self.imageList):
             print("Finish")
             return
-        imagepath = self.imageList[self.cur-1] # self.cur is 1-based
+        
+        if self.imglist != '':
+            imagepath = self.imageDir + "/{:0>6}.jpg".format(self.cur)
+        else:
+            imagepath = self.imageList[self.cur-1] # self.cur is 1-based
+
         img = Image.open(imagepath)
         self.imageOriginWidth = img.size[0]
         self.imageOriginHeight = img.size[1]
@@ -331,8 +336,11 @@ class LabelTool():
         """
         self.bboxList -> ***.xml
         """
-        imagepath = self.imageList[self.cur-1]
-        filename = os.path.split(imagepath)[1][:-4]
+        if args.imglist != '':
+            filename = "{:0>6}".format(self.cur)
+        else:
+            imagepath = self.imageList[self.cur-1]
+            filename = os.path.split(imagepath)[1][:-4]
 
         width, height = self.imageOriginWidth, self.imageOriginHeight
         objs = ""
@@ -363,7 +371,7 @@ class LabelTool():
             os.remove(xmlfile)
         with open(xmlfile, 'w') as fid:
             fid.write(newAnno)
-        print('Image No. %d saved' % self.cur)
+        print('Image No. %d saved to %s' % (self.cur, xmlfile))
 
         #if not os.path.exists(os.path.join(self.outDir, '.col.txt')):
         #    with open(os.path.join(self.outDir, '.col.txt'), 'w') as f:
