@@ -5,14 +5,14 @@ import os, six
 import codecs
 import string
 import datetime
-import commands
+import subprocess
 
 CONF = {
     'basedir': os.curdir,
-    'dataset_name': 'default',
+    'dataset_name': 'ship',
     'year': 'default',
-    'image_path': '/home/xxoo/Pictures',
-    'dataset_save_path': '/home/xxoo/data/',
+    'image_path': '/media/xwj/Data/DataSet/seaship/img',
+    'dataset_save_path': '/media/xwj/Data/DataSet',
     'classes_name':'none',
     'if_single':False
 }
@@ -114,7 +114,7 @@ def checkDir(imgDir, dstDir):
             if f.endswith(ext):
                 flag = True
     if flag == False:
-        raise ValueError, "No found image in image directory: {}".format(imgDir)
+        raise ValueError("No found image in image directory: {}".format(imgDir))
 
     if not os.path.exists(dstDir):
         os.makedirs(dstDir)
@@ -122,27 +122,26 @@ def checkDir(imgDir, dstDir):
 def createJPEGImages():
     ds_path = os.path.join(CONF['dataset_save_path'], CONF['dataset_name']+CONF['year'], 'JPEGImages')
     if os.path.exists(ds_path):
-        print "{} exists".format(ds_path)
+        print ("{} exists".format(ds_path))
         return
 
     os.makedirs(ds_path)
     ext = os.listdir(CONF['image_path'])[0][-4:]
     imgfiles = [os.path.join(CONF['image_path'], x) for x in os.listdir(CONF['image_path']) if x.endswith(ext)] 
-    print "Create {}...".format(ds_path)
+    print ("Create {}...".format(ds_path))
     for enum, src in enumerate(imgfiles):
         dst = os.path.join(ds_path, '{:0>6}.jpg'.format(enum+1))
         cmd = 'ln -s {} {}'.format(src, dst)
-        (status, output) = commands.getstatusoutput(cmd)
+        (status, output) = subprocess.getstatusoutput(cmd)
 
-def main():
-
-    print '''Welcome to createDS.py.
-
+'''
 This script will help you create a VOC-like dataset.
 
 Please answer the following questions. 
-    ''' 
-    
+'''
+def main():
+
+    print ('Welcome to createDS.py')
     cfg_file = os.path.join(os.environ['HOME'], '.bbox_label.txt')
     if os.path.exists(cfg_file):
         with open(cfg_file, 'r') as fid:
@@ -173,7 +172,7 @@ Please answer the following questions.
 
     createJPEGImages()
 
-    print "Run python main_voc.py to start labelling images\n\n"
+    print ("Run python main_voc.py to start labelling images\n\n")
 
 if __name__ == "__main__":
     main()

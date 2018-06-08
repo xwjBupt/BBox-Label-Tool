@@ -16,7 +16,7 @@ try:
 except ImportError:
     # for Python3
     from tkinter import *   ## notice lowercase 't' in tkinter here
-import tkMessageBox
+from tkinter import messagebox
 from PIL import Image, ImageTk
 import os
 import glob
@@ -204,7 +204,7 @@ class LabelTool():
     def read_cfg(self):
         cfg_file = self.args.cfg
         if not os.path.exists(cfg_file):
-            raise IOError, "No found config file {}, run tool/createDS.py first.\n Or you can set config file in \"main_voc.py [cfg_path]\"".format(cfg_file)
+            raise IOError("No found config file {}, run tool/createDS.py first.\n Or you can set config file in \"main_voc.py [cfg_path]\"".format(cfg_file))
 
         with open(cfg_file, 'r') as fid:
             for line in [x.split('\n')[0] for x in fid.readlines()]:
@@ -214,7 +214,7 @@ class LabelTool():
     def write_cfg(self):
         cfg_file = self.args.cfg
         if not os.path.exists(cfg_file):
-            raise IOError, "No found config file {}, run tool/createDS.py first.\n Or you can set config file in \"main_voc.py [cfg_path]\"".format(cfg_file)
+            raise IOError("No found config file {}, run tool/createDS.py first.\n Or you can set config file in \"main_voc.py [cfg_path]\"".format(cfg_file))
 
         with open(cfg_file, 'w') as fid:
             for (name, value) in self.cfg.items():
@@ -230,8 +230,8 @@ class LabelTool():
         else:
             self.imageDir = ''
         if not os.path.isdir(self.imageDir):
-           tkMessageBox.showerror("Error!", message="The specified dir doesn't exist!")
-           return
+            messagebox.showerror("Error!", message="The specified dir doesn't exist!")
+            return
         # get image list
         self.imageList = glob.glob(os.path.join(self.imageDir, '*.jpg'))
         if len(self.imageList) == 0:
@@ -386,7 +386,7 @@ class LabelTool():
     def mouseClick(self, event):
         sel = self.listbox2.curselection()
         if len(sel) != 1 and len(self.class_name) > 1:
-            tkMessageBox.showerror("Error!", message="The specified bbox must be linked to an obj index!")
+            messagebox.showerror("Error!", message="The specified bbox must be linked to an obj index!")
             self.mainPanel.delete(self.bboxId)
             self.STATE['click'] = 0
             return
@@ -471,7 +471,7 @@ class LabelTool():
     def addObjs(self):
         self.class_name = self.cfg['classes_name'].split(',')
         self.num = len(self.class_name)
-        for id_index in xrange(1, self.num+1):
+        for id_index in range(1, self.num+1):
             color = COLORS[id_index % len(COLORS)]
             self.relc[id_index] = color
             self.listbox2.insert(END, self.class_name[id_index-1])
@@ -492,7 +492,7 @@ class LabelTool():
             if i == id_index:
                 is_linked = True
         if is_linked:
-            tkMessageBox.showerror("Error!", message="There is a bbox linked to this obj, delete the bbox first!")
+            messagebox.showerror("Error!", message="There is a bbox linked to this obj, delete the bbox first!")
             return
         self.listbox2.delete(idx)
 
