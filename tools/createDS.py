@@ -25,6 +25,8 @@ if six.PY3:
 else:
     str_compat = unicode
 
+
+
 def _input_compat(prompt): 
     if six.PY3:
         r = input(prompt)
