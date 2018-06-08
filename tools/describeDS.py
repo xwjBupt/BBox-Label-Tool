@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 import torch.utils.data as data
 import xml.etree.ElementTree as ET
 import six
-
+import cv2
+import torch
 
 class AnnotationTransform(object):
     """Transforms a VOC annotation into a Tensor of bbox coords and label index
