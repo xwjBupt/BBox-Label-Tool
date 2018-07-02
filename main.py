@@ -15,7 +15,7 @@ try:
 except ImportError:
     # for Python3
     from tkinter import *   ## notice lowercase 't' in tkinter here
-import tkMessageBox
+from tkinter import messagebox
 from PIL import Image, ImageTk
 import os
 import glob
@@ -153,8 +153,8 @@ class LabelTool():
         else:
             self.imageDir = ''
         if not os.path.isdir(self.imageDir):
-           tkMessageBox.showerror("Error!", message="The specified dir doesn't exist!")
-           return
+            messagebox.showerror("Error!", message="The specified dir doesn't exist!")
+            return
         # get image list
         self.imageList = glob.glob(os.path.join(self.imageDir, '*.jpg'))
         #self.imageList = glob.glob(os.path.join(self.imageDir, '*.JPG'))
@@ -203,7 +203,7 @@ class LabelTool():
         if os.path.isdir(self.write_dir):
             curr_labels = glob.glob(os.path.join(self.write_dir, '*.txt'))
             if len(curr_labels) > 0:
-            	curr_labels.sort()
+                curr_labels.sort()
                 self.clearObj()
                 for label_name in curr_labels:
                     id_index = int(os.path.split(label_name)[-1].split('.')[0])
@@ -256,7 +256,7 @@ class LabelTool():
     def mouseClick(self, event):
         sel = self.listbox2.curselection()
         if len(sel) != 1 and len(class_name) > 1:
-            tkMessageBox.showerror("Error!", message="The specified bbox must be linked to an obj index!")
+            messagebox.showerror("Error!", message="The specified bbox must be linked to an obj index!")
             self.mainPanel.delete(self.bboxId)
             self.STATE['click'] = 0
             return
@@ -357,7 +357,7 @@ class LabelTool():
             if i == id_index:
                 is_linked = True
         if is_linked:
-            tkMessageBox.showerror("Error!", message="There is a bbox linked to this obj, delete the bbox first!")
+            messagebox.showerror("Error!", message="There is a bbox linked to this obj, delete the bbox first!")
             return
         self.listbox2.delete(idx)
 
@@ -406,7 +406,7 @@ class LabelTool():
             if abs(self.bboxList[i][0] - pos[0]*1.0 / self.imageScale) < eps and abs(self.bboxList[i][1] - pos[1]*1.0 / self.imageScale) < eps:
                 idx = i
                 break
-        print "delete: ", idx, pos
+        print ("delete: ", idx, pos)
         self.delBBox(idx)
 
 if __name__ == '__main__':

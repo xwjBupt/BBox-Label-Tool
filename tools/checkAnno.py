@@ -111,7 +111,8 @@ def delete_file(xmlfiles, root):
 
 
 def checkAnnotations(args):
-    root = os.path.abspath(args.anno_dir)
+    #root = os.path.abspath(args.anno_dir)
+    root = args
     xmls = sorted([os.path.join(root, x) for x in os.listdir(root) if x.endswith('.xml')])
 
     t = tqdm.tqdm()
@@ -192,7 +193,8 @@ def main(args):
     checkAnnotations(args)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Check annotations in voc-like dataset.')
-    parser.add_argument('--anno_dir', required=True, type=str, help='annotation xml file directory.')
-    args = parser.parse_args()
-    main(args)
+    # parser = argparse.ArgumentParser(description='Check annotations in voc-like dataset.')
+    # parser.add_argument('--anno_dir', required=True, type=str, help='annotation xml file directory.')
+    # args = parser.parse_args()
+    diranna = '/media/xwj/Data/DataSet/SHIPFAST2018/Annotations'
+    main(diranna)
