@@ -1,7 +1,7 @@
 dataset_name:SEASHIP
 year:2018
-image_path:/media/xwj/Data/DataSet/seaship/img
-dataset_save_path:/media/xwj/Data/Dataset/SHIPFAST
-classes_name:1
+image_path:/home/xwj/VOCdevkit2007/VOC2007/JPEGImages
+dataset_save_path:/media/xwj/Data/Dataset/SHIPFASTVOC-9
+classes_name:boat
 if_single:False
 current_index:1

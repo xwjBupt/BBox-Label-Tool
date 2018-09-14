@@ -9,10 +9,10 @@ import subprocess
 
 CONF = {
     'basedir': os.curdir,
-    'dataset_name': 'ship',
+    'dataset_name': 'boat',
     'year': 'default',
-    'image_path': '/media/xwj/Data/DataSet/seaship/img',
-    'dataset_save_path': '/media/xwj/Data/DataSet',
+    'image_path': '/home/xwj/VOCdevkit2007/VOC2007/JPEGImages',
+    'dataset_save_path': '/media/xwj/Data/DataSet/minishipVOC',
     'classes_name':'none',
     'if_single':False
 }
